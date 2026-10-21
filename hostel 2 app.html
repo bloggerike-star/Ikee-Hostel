@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ike Hostel - Ghanaian Off-Campus Accommodation Platform</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ghanaRed: '#CE1126',
+            ghanaGold: '#FCD116',
+            ghanaGreen: '#006B3F',
+            ghanaDark: '#121826',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts & FontAwesome / Lucide Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Leaflet Maps CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .ghana-stripe {
+      height: 4px;
+      background: linear-gradient(90deg, #CE1126 0%, #CE1126 33.33%, #FCD116 33.33%, #FCD116 66.66%, #006B3F 66.66%, #006B3F 100%);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .leaflet-popup-content-wrapper {
+      border-radius: 12px;
+      padding: 4px;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 antialiased min-h-screen flex flex-col justify-between">
+
+  <!-- TOP GHANA TRICOLOR BAR -->
+  <div class="ghana-stripe w-full"></div>
+
+  <!-- DISCLAIMER BANNER -->
+  <div class="bg-amber-100 border-b border-amber-200 px-4 py-2 text-xs md:text-sm text-amber-900 flex items-center justify-between">
+    <div class="container mx-auto flex items-center space-x-2">
+      <i class="fa-solid fa-triangle-exclamation text-amber-600 text-base shrink-0"></i>
+      <p class="font-medium">
+        <span class="font-bold underline">DISCLAIMER:</span> Ike Hostel platform is an official intermediary portal. The platform management is <strong class="underline">NOT responsible</strong> for any incorrect, unverified, or offline/unauthorized cash payments made directly to hostel managers or third parties outside approved channels.
+      </p>
+    </div>
+    <button onclick="this.parentElement.parentElement.remove()" class="text-amber-700 hover:text-amber-900 ml-2 font-bold">&times;</button>
+  </div>
+
+  <!-- NAVIGATION BAR -->
+  <header class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
+    <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+      
+      <!-- LOGO -->
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('explore')">
+        <div class="w-10 h-10 rounded-xl bg-ghanaDark flex items-center justify-center text-white relative overflow-hidden shadow-md">
+          <i class="fa-solid fa-building-user text-ghanaGold text-xl z-10"></i>
+          <div class="absolute bottom-0 w-full h-1.5 bg-ghanaGreen"></div>
+        </div>
+        <div>
+          <span class="text-2xl font-black tracking-tight text-ghanaDark">Ike<span class="text-ghanaRed">Hostel</span></span>
+          <span class="block text-[10px] font-bold uppercase tracking-wider text-ghanaGreen -mt-1">Ghana Off-Campus Student Hub</span>
+        </div>
+      </div>
+
+      <!-- NAV TABS / ROLE SWITCHER -->
+      <nav class="hidden md:flex items-center space-x-1 bg-gray-100 p-1 rounded-xl text-sm font-medium">
+        <button id="nav-explore" onclick="switchTab('explore')" class="px-4 py-2 rounded-lg transition-all flex items-center space-x-2 bg-white text-ghanaDark shadow-sm font-semibold">
+          <i class="fa-solid fa-compass text-ghanaRed"></i>
+          <span>Explore Hostels</span>
+        </button>
+        <button id="nav-map" onclick="switchTab('map')" class="px-4 py-2 rounded-lg transition-all flex items-center space-x-2 text-gray-600 hover:text-gray-900">
+          <i class="fa-solid fa-map-location-dot text-ghanaGreen"></i>
+          <span>Interactive Map</span>
+        </button>
+        <button id="nav-manager" onclick="switchTab('manager')" class="px-4 py-2 rounded-lg transition-all flex items-center space-x-2 text-gray-600 hover:text-gray-900">
+          <i class="fa-solid fa-sliders text-ghanaGold"></i>
+          <span>Manager Dashboard</span>
+        </button>
+        <button id="nav-admin" onclick="switchTab('admin')" class="px-4 py-2 rounded-lg transition-all flex items-center space-x-2 text-gray-600 hover:text-gray-900">
+          <i class="fa-solid fa-shield-halved text-blue-600"></i>
+          <span class="flex items-center space-x-1">
+            <span>Admin Approval</span>
+            <span id="pending-badge" class="bg-ghanaRed text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded-full hidden">0</span>
+          </span>
+        </button>
+      </nav>
+
+      <!-- USER ACTIONS & NOTIFICATIONS -->
+      <div class="flex items-center space-x-3">
+        <!-- NOTIFICATION BELL -->
+        <div class="relative">
+          <button onclick="toggleNotificationPanel()" class="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-100 relative transition">
+            <i class="fa-solid fa-bell text-lg"></i>
+            <span id="notif-ping" class="absolute top-1 right-1 w-2.5 h-2.5 bg-ghanaRed rounded-full animate-ping"></span>
+            <span id="notif-count" class="absolute top-1 right-1 w-2.5 h-2.5 bg-ghanaRed rounded-full border border-white"></span>
+          </button>
+
+          <!-- NOTIFICATION DROPDOWN -->
+          <div id="notif-dropdown" class="hidden absolute right-0 mt-3 w-80 md:w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+            <div class="p-3.5 bg-gray-900 text-white flex items-center justify-between">
+              <span class="font-semibold text-sm flex items-center gap-2">
+                <i class="fa-solid fa-bullhorn text-ghanaGold"></i> Push Notifications
+              </span>
+              <button onclick="clearNotifications()" class="text-xs text-gray-400 hover:text-white">Clear all</button>
+            </div>
+            <div id="notif-list" class="max-h-80 overflow-y-auto divide-y divide-gray-100 text-xs custom-scrollbar">
+              <!-- Dynamic Notifications -->
+            </div>
+          </div>
+        </div>
+
+        <!-- CHAT DRAWER TRIGGER -->
+        <button onclick="openChatModal('general')" class="w-10 h-10 rounded-full bg-ghanaDark text-white flex items-center justify-center hover:bg-gray-800 transition relative">
+          <i class="fa-solid fa-comments"></i>
+          <span class="absolute -bottom-1 -right-1 bg-ghanaGreen text-white text-[9px] font-bold px-1 rounded-full">Live</span>
+        </button>
+
+        <!-- AUTH BUTTON -->
+        <button id="auth-btn" onclick="openAuthModal()" class="px-4 py-2 rounded-xl bg-ghanaRed hover:bg-red-700 text-white font-semibold text-sm transition shadow-sm flex items-center space-x-2">
+          <i class="fa-solid fa-user-check"></i>
+          <span id="auth-btn-text">Sign In / Register</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- MOBILE NAV BOTTOM BAR -->
+    <div class="md:hidden flex items-center justify-around bg-gray-900 text-gray-300 py-2 border-t border-gray-800 text-xs">
+      <button onclick="switchTab('explore')" class="flex flex-col items-center py-1 text-ghanaGold">
+        <i class="fa-solid fa-compass text-base"></i>
+        <span class="mt-0.5">Explore</span>
+      </button>
+      <button onclick="switchTab('map')" class="flex flex-col items-center py-1 hover:text-white">
+        <i class="fa-solid fa-map-location-dot text-base"></i>
+        <span class="mt-0.5">Map</span>
+      </button>
+      <button onclick="switchTab('manager')" class="flex flex-col items-center py-1 hover:text-white">
+        <i class="fa-solid fa-sliders text-base"></i>
+        <span class="mt-0.5">Manager</span>
+      </button>
+      <button onclick="switchTab('admin')" class="flex flex-col items-center py-1 hover:text-white">
+        <i class="fa-solid fa-shield-halved text-base"></i>
+        <span class="mt-0.5">Admin</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="flex-grow">
+
+    <!-- VIEW 1: EXPLORE & SEARCH HOSTELS (STUDENT HOMEPAGE) -->
+    <section id="view-explore" class="block">
+      
+      <!-- HERO BANNER SECTION WITH GHANA COLOR ACCENTS -->
+      <div class="relative bg-gradient-to-r from-gray-900 via-ghanaDark to-gray-900 text-white overflow-hidden py-12 md:py-20 px-4">
+        <!-- Background Decorative Elements -->
+        <div class="absolute -top-10 -right-10 w-96 h-96 rounded-full bg-ghanaRed/20 blur-3xl pointer-events-none"></div>
+        <div class="absolute -bottom-10 -left-10 w-96 h-96 rounded-full bg-ghanaGreen/20 blur-3xl pointer-events-none"></div>
+
+        <div class="container mx-auto relative z-10 max-w-5xl text-center">
+          <div class="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-semibold text-ghanaGold mb-4 border border-white/20">
+            <span class="w-2 h-2 rounded-full bg-ghanaGreen"></span>
+            <span>Ghana's Verified Off-Campus Accommodation Hub</span>
+            <span class="bg-ghanaRed text-white px-2 py-0.5 rounded-full text-[10px]">2026/2027 Academic Year</span>
+          </div>
+
+          <h1 class="text-3xl md:text-5xl font-extrabold tracking-tight mb-4 leading-tight">
+            Find & Book Secure Off-Campus Hostels Near Your <span class="text-transparent bg-clip-text bg-gradient-to-r from-ghanaGold via-yellow-300 to-ghanaRed">Ghanaian University</span>
+          </h1>
+          <p class="text-gray-300 text-sm md:text-lg max-w-3xl mx-auto mb-8 font-light">
+            Verified landlords, 1-to-4 bed occupancy options, transparent utility pricing, MoMo payments, and exact proximity metrics to UG, KNUST, UCC, UMaT, UHAS, and all public institutions.
+          </p>
+
+          <!-- COMPREHENSIVE SEARCH & FILTER CARD -->
+          <div class="bg-white rounded-2xl p-4 md:p-6 text-gray-800 shadow-2xl border border-gray-100 max-w-4xl mx-auto text-left">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              
+              <!-- Public University Dropdown -->
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Public University</label>
+                <select id="filter-university" onchange="applyFilters()" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-ghanaGreen focus:outline-none">
+                  <option value="ALL">All Universities in Ghana</option>
+                  <option value="UG">University of Ghana (UG - Legon)</option>
+                  <option value="KNUST">Kwame Nkrumah Univ of Sci & Tech (KNUST)</option>
+                  <option value="UCC">University of Cape Coast (UCC)</option>
+                  <option value="UMaT">Univ of Mines & Tech (UMaT - Tarkwa)</option>
+                  <option value="UHAS">Univ of Health & Allied Sciences (UHAS)</option>
+                  <option value="UENR">Univ of Energy & Nat Resources (UENR)</option>
+                  <option value="CKT-UTAS">CKT-UTAS (Navrongo)</option>
+                  <option value="SD-DOMBO">SD Dombo Univ (Wa)</option>
+                  <option value="ATU">Accra Technical University (ATU)</option>
+                  <option value="KsTU">Kumasi Technical University (KsTU)</option>
+                  <option value="TTU">Takoradi Technical University (TTU)</option>
+                  <option value="UPSA">University of Professional Studies (UPSA)</option>
+                </select>
+              </div>
+
+              <!-- City / Town -->
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">City / Region</label>
+                <select id="filter-city" onchange="applyFilters()" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-ghanaGreen focus:outline-none">
+                  <option value="ALL">All Ghanaian Cities</option>
+                  <option value="Accra">Accra (Legon / Madina / Ayawaso)</option>
+                  <option value="Kumasi">Kumasi (Ayeduase / Kotei / Ayigya)</option>
+                  <option value="Cape Coast">Cape Coast (Apewosika / Amamoma)</option>
+                  <option value="Takoradi">Takoradi / Sekondi</option>
+                  <option value="Ho">Ho (Volta Region)</option>
+                  <option value="Sunyani">Sunyani (Bono Region)</option>
+                  <option value="Tarkwa">Tarkwa (Western Region)</option>
+                </select>
+              </div>
+
+              <!-- Room Occupancy Type -->
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Room Capacity</label>
+                <select id="filter-occupancy" onchange="applyFilters()" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-ghanaGreen focus:outline-none">
+                  <option value="ALL">Any Occupancy</option>
+                  <option value="1 in a room">1 in a room (Private Single)</option>
+                  <option value="2 in a room">2 in a room (Shared Double)</option>
+                  <option value="3 in a room">3 in a room</option>
+                  <option value="4 in a room">4 in a room (Budget Quad)</option>
+                </select>
+              </div>
+
+              <!-- Washroom Type -->
+              <div>
+                <label class="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Washroom Type</label>
+                <select id="filter-washroom" onchange="applyFilters()" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-ghanaGreen focus:outline-none">
+                  <option value="ALL">All Washroom Types</option>
+                  <option value="Private / Ensuite">Private / Ensuite Washroom</option>
+                  <option value="Shared Washroom">Shared Washroom</option>
+                </select>
+              </div>
+
+            </div>
+
+            <!-- SECOND ROW FILTERS: Price Range Slider & Quick Badges -->
+            <div class="mt-4 pt-4 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div class="w-full md:w-1/2">
+                <div class="flex justify-between text-xs font-bold text-gray-600 mb-1">
+                  <span>Max Budget Per Academic Year:</span>
+                  <span class="text-ghanaRed font-extrabold text-sm">GH₵ <span id="price-slider-val">12,000</span></span>
+                </div>
+                <input type="range" id="filter-price" min="2000" max="25000" step="500" value="25000" oninput="updatePriceLabel(this.value); applyFilters();" class="w-full accent-ghanaRed cursor-pointer">
+              </div>
+
+              <div class="flex items-center space-x-2 w-full md:w-auto justify-end text-xs">
+                <button onclick="resetFilters()" class="px-3 py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-100 font-semibold flex items-center space-x-1">
+                  <i class="fa-solid fa-rotate-left"></i>
+                  <span>Reset Filters</span>
+                </button>
+                <button onclick="switchTab('map')" class="px-4 py-2 rounded-xl bg-ghanaGreen hover:bg-emerald-800 text-white font-semibold flex items-center space-x-1 shadow">
+                  <i class="fa-solid fa-map-marked-alt"></i>
+                  <span>Map View</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- FEATURED LISTINGS GRID -->
+      <div class="container mx-auto px-4 py-10">
+        <div class="flex items-center justify-between mb-6">
+          <div>
+            <h2 class="text-2xl font-black text-gray-900">Available Off-Campus Hostels</h2>
+            <p class="text-xs md:text-sm text-gray-500">Showing verified student rooms with direct manager contact & online booking</p>
+          </div>
+          <span id="results-count-badge" class="bg-gray-200 text-gray-800 text-xs font-bold px-3 py-1 rounded-full">6 Hostels Listed</span>
+        </div>
+
+        <!-- HOSTELS GRID CONTAINER -->
+        <div id="hostels-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <!-- Dynamic Listing Cards Inserted via JS -->
+        </div>
+
+        <!-- EMPTY STATE -->
+        <div id="no-results-msg" class="hidden text-center py-16 bg-white rounded-2xl border border-dashed border-gray-300">
+          <i class="fa-solid fa-house-circle-xmark text-5xl text-gray-300 mb-3"></i>
+          <h3 class="text-lg font-bold text-gray-700">No Hostels Match Your Criteria</h3>
+          <p class="text-xs text-gray-500 mb-4">Try relaxing your price filter or selecting "All Universities".</p>
+          <button onclick="resetFilters()" class="px-4 py-2 bg-ghanaRed text-white rounded-xl text-xs font-bold">Reset Filters</button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- VIEW 2: INTERACTIVE LEAFLET MAP OF GHANA -->
+    <section id="view-map" class="hidden">
+      <div class="container mx-auto px-4 py-6">
+        <div class="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden flex flex-col md:flex-row h-[75vh]">
+          
+          <!-- MAP SIDEBAR LIST -->
+          <div class="w-full md:w-80 border-r border-gray-200 bg-gray-50 flex flex-col h-full">
+            <div class="p-4 bg-gray-900 text-white flex items-center justify-between">
+              <div>
+                <h3 class="font-bold text-sm">Hostels Map Directory</h3>
+                <p class="text-[11px] text-ghanaGold">Accra, Kumasi & Takoradi Campuses</p>
+              </div>
+              <i class="fa-solid fa-location-dot text-ghanaRed text-lg"></i>
+            </div>
+            <div id="map-hostel-list" class="flex-grow overflow-y-auto divide-y divide-gray-200 text-xs custom-scrollbar">
+              <!-- Dynamic Map Hostel Items -->
+            </div>
+          </div>
+
+          <!-- MAP CONTAINER -->
+          <div class="flex-grow h-full relative">
+            <div id="leaflet-map" class="w-full h-full z-10"></div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: HOSTEL MANAGER DASHBOARD & UPLOAD -->
+    <section id="view-manager" class="hidden">
+      <div class="container mx-auto px-4 py-8 max-w-5xl">
+        
+        <!-- VERIFICATION ALERT BANNER -->
+        <div id="manager-status-card" class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-xl mb-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0 font-bold">
+              <i class="fa-solid fa-clock-rotate-left"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-amber-900 text-sm">Manager Account Status: <span id="mgr-status-text" class="uppercase text-amber-700">Verified & Active</span></h4>
+              <p class="text-xs text-amber-800">Your operating license is verified by Ike Hostel Admin. You can publish rooms directly to students.</p>
+            </div>
+          </div>
+          <button onclick="openAuthModal('manager')" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition shrink-0">
+            Re-submit Permit
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          <!-- UPLOAD NEW HOSTEL ROOM FORM -->
+          <div class="lg:col-span-2 bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
+            <div class="flex items-center justify-between pb-4 mb-6 border-b border-gray-100">
+              <div>
+                <h3 class="text-lg font-bold text-gray-900">Upload New Room / Hostel Listing</h3>
+                <p class="text-xs text-gray-500">Provide accurate occupancy and utility details for Ghanaian students</p>
+              </div>
+              <span class="bg-ghanaGreen/10 text-ghanaGreen text-xs font-bold px-2.5 py-1 rounded-full">Manager Portal</span>
+            </div>
+
+            <form id="add-room-form" onsubmit="handleManagerSubmitListing(event)" class="space-y-4">
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-gray-700 mb-1">Hostel Name *</label>
+                  <input type="text" id="mgr-hostel-name" required placeholder="e.g. Pentagon Villa Hostel" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-ghanaGreen focus:outline-none">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-gray-700 mb-1">Nearest Public University *</label>
+                  <select id="mgr-university" required class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-ghanaGreen focus:outline-none">
+                    <option value="UG">University of Ghana (UG - Legon)</option>
+                    <option value="KNUST">Kwame Nkrumah Univ of Sci & Tech (KNUST)</option>
+                    <option value="UCC">University of Cape Coast (UCC)</option>
+                    <option value="UMaT">Univ of Mines & Tech (UMaT)</option>
+                    <option value="UHAS">Univ of Health & Allied Sciences (UHAS)</option>
+                    <option value="ATU">Accra Technical University (ATU)</option>
+                    <option value="KsTU">Kumasi Technical University (KsTU)</option>
+                    <option value="TTU">Takoradi Technical University (TTU)</option>
+                    <option value="UPSA">University of Professional Studies (UPSA)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-gray-700 mb-1">City / Town *</label>
+                  <input type="text" id="mgr-city" required placeholder="e.g. Accra / Legon" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-ghanaGreen focus:outline-none">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-gray-700 mb-1">Distance to Campus *</label>
+                  <input type="text" id="mgr-distance" required placeholder="e.g. 5 mins walk / 0.8 km" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-ghanaGreen focus:outline-none">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-gray-700 mb-1">Price per Academic Year (GH₵) *</label>
+                  <input type="number" id="mgr-price" required min="1000" placeholder="e.g. 6500" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-ghanaGreen focus:outline-none">
+                </div>
+              </div>
+
+              <!-- UTILITIES FEE TOGGLE -->
+              <div class="bg-gray-50 p-3 rounded-xl border border-gray-200 flex items-center justify-between">
+                <div>
+                  <span class="block text-xs font-bold text-gray-800">Utility Fee Status</span>
+                  <span class="text-[11px] text-gray-500">State clearly if light/water bills are included in price</span>
+                </div>
+                <select id="mgr-utilities" class="border border-gray-300 rounded-lg text-xs p-1.5 font-bold">
+                  <option value="Inclusive of Electricity & Water">Inclusive of Utilities</option>
+                  <option value="Additional Service Fees Apply">Additional Fees Apply (Prepaid Meter)</option>
+                </select>
+              </div>
+
+              <!-- ROOM OCCUPANCY & WASHROOM SPECIFICATIONS -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-gray-700 mb-1">Room Occupancy Type *</label>
+                  <select id="mgr-occupancy" required class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-ghanaGreen focus:outline-none font-semibold">
+                    <option value="1 in a room">1 in a room (Single)</option>
+                    <option value="2 in a room">2 in a room (Double)</option>
+                    <option value="3 in a room">3 in a room</option>
+                    <option value="4 in a room">4 in a room (Quad)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-gray-700 mb-1">Washroom Configuration *</label>
+                  <select id="mgr-washroom" required class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-ghanaGreen focus:outline-none font-semibold">
+                    <option value="Private / Ensuite Washroom">Private / Ensuite Washroom</option>
+                    <option value="Shared Washroom">Shared Washroom</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- AMENITIES CHECKBOXES -->
+              <div>
+                <label class="block text-xs font-bold text-gray-700 mb-2">Room Amenities Provided</label>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+                  <label class="flex items-center space-x-2 bg-gray-50 p-2 rounded-lg border border-gray-200 cursor-pointer">
+                    <input type="checkbox" name="amenities" value="Wi-Fi" checked class="accent-ghanaGreen">
+                    <span>High-Speed Wi-Fi</span>
+                  </label>
+                  <label class="flex items-center space-x-2 bg-gray-50 p-2 rounded-lg border border-gray-200 cursor-pointer">
+                    <input type="checkbox" name="amenities" value="Standby Generator" checked class="accent-ghanaGreen">
+                    <span>Standby Plant/Generator</span>
+                  </label>
+                  <label class="flex items-center space-x-2 bg-gray-50 p-2 rounded-lg border border-gray-200 cursor-pointer">
+                    <input type="checkbox" name="amenities" value="PolyTank Water Storage" checked class="accent-ghanaGreen">
+                    <span>PolyTank / Continuous Water</span>
+                  </label>
+                  <label class="flex items-center space-x-2 bg-gray-50 p-2 rounded-lg border border-gray-200 cursor-pointer">
+                    <input type="checkbox" name="amenities" value="24/7 Security" checked class="accent-ghanaGreen">
+                    <span>24/7 Security / CCTV</span>
+                  </label>
+                  <label class="flex items-center space-x-2 bg-gray-50 p-2 rounded-lg border border-gray-200 cursor-pointer">
+                    <input type="checkbox" name="amenities" value="Air Conditioner" class="accent-ghanaGreen">
+                    <span>Air Conditioning</span>
+                  </label>
+                  <label class="flex items-center space-x-2 bg-gray-50 p-2 rounded-lg border border-gray-200 cursor-pointer">
+                    <input type="checkbox" name="amenities" value="Study Desk & Chair" checked class="accent-ghanaGreen">
+                    <span>Study Table & Chair</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- MEDIA UPLOADS -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-bold text-gray-700 mb-1">High-Quality Photo URL</label>
+                  <input type="url" id="mgr-photo-url" placeholder="https://images.unsplash.com/..." value="https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-ghanaGreen focus:outline-none">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-gray-700 mb-1">Virtual Video Tour Embed Link</label>
+                  <input type="url" id="mgr-video-url" placeholder="https://www.youtube.com/embed/..." value="https://www.youtube.com/embed/dQw4w9WgXcQ" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-ghanaGreen focus:outline-none">
+                </div>
+              </div>
+
+              <!-- SUBMIT BUTTON -->
+              <button type="submit" class="w-full py-3 bg-ghanaGreen hover:bg-emerald-800 text-white font-bold rounded-xl shadow-lg transition flex items-center justify-center space-x-2">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+                <span>Publish Room Listing to App</span>
+              </button>
+
+            </form>
+          </div>
+
+          <!-- MANAGER EXISTING LISTINGS & STATS -->
+          <div class="space-y-6">
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-5">
+              <h4 class="font-bold text-gray-900 text-sm mb-3">Manager Quick Summary</h4>
+              <div class="grid grid-cols-2 gap-3 text-center">
+                <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                  <span class="block text-2xl font-black text-ghanaDark" id="mgr-total-count">4</span>
+                  <span class="text-[11px] font-bold text-gray-500 uppercase">Active Rooms</span>
+                </div>
+                <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                  <span class="block text-2xl font-black text-ghanaGreen">12</span>
+                  <span class="text-[11px] font-bold text-gray-500 uppercase">Bookings Recv.</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- MY MANAGED LISTINGS PREVIEW -->
+            <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-5">
+              <h4 class="font-bold text-gray-900 text-sm mb-3">My Uploaded Hostels</h4>
+              <div id="mgr-uploaded-list" class="space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
+                <!-- Managed items dynamically filled -->
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 4: ADMIN APPROVAL DASHBOARD (PERMIT VERIFICATION WORKFLOW) -->
+    <section id="view-admin" class="hidden">
+      <div class="container mx-auto px-4 py-8 max-w-5xl">
+        <div class="bg-gray-900 text-white rounded-2xl p-6 shadow-2xl mb-8 flex items-center justify-between">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-ghanaRed"></span>
+              <h2 class="text-xl font-black tracking-tight">Ike Hostel Central Admin Dashboard</h2>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">Review manager business permits, operating licenses, and issue app permissions.</p>
+          </div>
+          <div class="bg-white/10 px-4 py-2 rounded-xl text-right">
+            <span class="block text-xs text-gray-300">Pending Reviews</span>
+            <span id="admin-pending-count" class="text-2xl font-bold text-ghanaGold">1</span>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+          <div class="p-4 bg-gray-50 border-b border-gray-200 font-bold text-xs text-gray-700 uppercase tracking-wider grid grid-cols-12 gap-2">
+            <span class="col-span-3">Hostel Manager & Business</span>
+            <span class="col-span-3">University / City</span>
+            <span class="col-span-3">Permit / License Document</span>
+            <span class="col-span-3 text-right">Verification Action</span>
+          </div>
+
+          <div id="admin-permit-list" class="divide-y divide-gray-100">
+            <!-- Dynamic Permit Approvals Filled via JS -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- HOSTEL DETAIL MODAL WITH REVIEWS, VIRTUAL TOUR & BOOKING -->
+  <div id="detail-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 md:p-6 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-gray-200 custom-scrollbar relative">
+      
+      <!-- CLOSE BUTTON -->
+      <button onclick="closeDetailModal()" class="absolute top-4 right-4 z-20 w-10 h-10 bg-black/50 hover:bg-black text-white rounded-full flex items-center justify-center transition">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+
+      <!-- HERO IMAGE & BADGES -->
+      <div class="relative h-64 md:h-80 w-full bg-gray-900">
+        <img id="modal-img" src="" alt="Hostel Room" class="w-full h-full object-cover">
+        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30"></div>
+        
+        <div class="absolute bottom-4 left-4 right-4 text-white flex flex-col md:flex-row md:items-end justify-between gap-2">
+          <div>
+            <div class="flex items-center space-x-2 mb-1">
+              <span id="modal-univ-badge" class="bg-ghanaRed text-white text-[11px] font-extrabold px-2.5 py-0.5 rounded-full">UG LEGON</span>
+              <span id="modal-verified-badge" class="bg-ghanaGreen text-white text-[11px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                <i class="fa-solid fa-circle-check"></i> Verified Landlord Permit
+              </span>
+            </div>
+            <h2 id="modal-title" class="text-2xl md:text-3xl font-black">Hostel Name</h2>
+            <p id="modal-location" class="text-xs md:text-sm text-gray-300 flex items-center gap-1">
+              <i class="fa-solid fa-location-dot text-ghanaGold"></i> Location
+            </p>
+          </div>
+
+          <div class="bg-white/10 backdrop-blur-md p-3 rounded-2xl border border-white/20 text-right">
+            <span class="block text-[10px] text-gray-300 uppercase tracking-wider">Academic Year Rate</span>
+            <span class="text-2xl font-black text-ghanaGold">GH₵ <span id="modal-price">0</span></span>
+            <span id="modal-utilities" class="block text-[10px] text-emerald-300 font-semibold">Utilities Included</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL BODY CONTENT -->
+      <div class="p-6 space-y-6">
+        
+        <!-- ROOM SPECS GRID -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+          <div class="bg-gray-50 p-3 rounded-2xl border border-gray-200">
+            <i class="fa-solid fa-users text-ghanaRed text-lg mb-1"></i>
+            <span class="block text-[10px] uppercase font-bold text-gray-400">Occupancy</span>
+            <span id="modal-occupancy" class="text-xs font-bold text-gray-800">2 in a room</span>
+          </div>
+          <div class="bg-gray-50 p-3 rounded-2xl border border-gray-200">
+            <i class="fa-solid fa-bath text-ghanaGreen text-lg mb-1"></i>
+            <span class="block text-[10px] uppercase font-bold text-gray-400">Washroom</span>
+            <span id="modal-washroom" class="text-xs font-bold text-gray-800">Private Ensuite</span>
+          </div>
+          <div class="bg-gray-50 p-3 rounded-2xl border border-gray-200">
+            <i class="fa-solid fa-person-walking text-ghanaGold text-lg mb-1"></i>
+            <span class="block text-[10px] uppercase font-bold text-gray-400">Proximity</span>
+            <span id="modal-distance" class="text-xs font-bold text-gray-800">5 mins walk</span>
+          </div>
+          <div class="bg-gray-50 p-3 rounded-2xl border border-gray-200">
+            <i class="fa-solid fa-star text-amber-500 text-lg mb-1"></i>
+            <span class="block text-[10px] uppercase font-bold text-gray-400">Rating</span>
+            <span id="modal-rating" class="text-xs font-bold text-gray-800">4.8 / 5.0</span>
+          </div>
+        </div>
+
+        <!-- VIRTUAL TOUR & AMENITIES -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h4 class="font-bold text-gray-900 text-sm mb-2 flex items-center gap-2">
+              <i class="fa-solid fa-[#FF0000] fa-youtube text-red-600"></i> Virtual Room Tour Video
+            </h4>
+            <div class="aspect-video w-full rounded-2xl overflow-hidden bg-black border border-gray-200">
+              <iframe id="modal-video-iframe" class="w-full h-full" src="" title="Virtual Room Tour" allowfullscreen></iframe>
+            </div>
+          </div>
+
+          <div>
+            <h4 class="font-bold text-gray-900 text-sm mb-2">Key Hostel Amenities</h4>
+            <div id="modal-amenities" class="grid grid-cols-2 gap-2 text-xs">
+              <!-- Amenities Pill Badges -->
+            </div>
+
+            <!-- MANAGER CONTACT BOX -->
+            <div class="mt-4 p-4 rounded-2xl bg-gray-900 text-white flex items-center justify-between">
+              <div>
+                <span class="text-[10px] text-gray-400 uppercase tracking-wider block">Verified Manager</span>
+                <span id="modal-manager-name" class="font-bold text-sm">Mr. Kwesi Mensah</span>
+              </div>
+              <button onclick="openChatFromModal()" class="px-3 py-1.5 bg-ghanaGold text-ghanaDark font-bold rounded-xl text-xs hover:bg-yellow-400 transition flex items-center gap-1">
+                <i class="fa-solid fa-comment-dots"></i> Chat Manager
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- REVIEWS & RATING BREAKDOWN -->
+        <div class="border-t border-gray-200 pt-4">
+          <h4 class="font-bold text-gray-900 text-sm mb-3">Student Ratings & Verified Reviews</h4>
+          <div class="space-y-3 max-h-48 overflow-y-auto custom-scrollbar" id="modal-reviews-list">
+            <!-- Reviews filled via JS -->
+          </div>
+        </div>
+
+        <!-- ACTION BUTTONS / BOOKING CTA -->
+        <div class="border-t border-gray-200 pt-4 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div class="text-xs text-gray-500">
+            <i class="fa-solid fa-shield-halved text-ghanaGreen"></i> Free cancellation prior to academic semester start.
+          </div>
+          <button onclick="openBookingPaymentModal()" class="w-full md:w-auto px-8 py-3 bg-ghanaRed hover:bg-red-700 text-white font-extrabold rounded-2xl shadow-xl transition text-sm flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-lock"></i>
+            <span>Proceed to Book & Reserve Room</span>
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SECURE BOOKING & PAYMENT MODAL -->
+  <div id="booking-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-gray-200 relative overflow-hidden">
+      
+      <button onclick="closeBookingModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl font-bold">&times;</button>
+
+      <div class="flex items-center space-x-2 mb-4">
+        <div class="w-8 h-8 rounded-full bg-ghanaGreen/10 flex items-center justify-center text-ghanaGreen font-bold text-sm">
+          <i class="fa-solid fa-credit-card"></i>
+        </div>
+        <div>
+          <h3 class="font-black text-gray-900 text-lg">Secure Room Reservation</h3>
+          <p class="text-xs text-gray-500">Choose payment method & confirm booking deposit</p>
+        </div>
+      </div>
+
+      <!-- BOOKING FORM STEP 1 -->
+      <div id="booking-step-1" class="space-y-4">
+        
+        <div class="bg-gray-50 p-3 rounded-2xl border border-gray-200 text-xs flex justify-between items-center">
+          <div>
+            <span id="checkout-hostel-title" class="font-bold text-gray-800 block">Hostel Name</span>
+            <span id="checkout-room-type" class="text-gray-500">2 in a room - Ensuite</span>
+          </div>
+          <div class="text-right">
+            <span class="text-gray-400 block text-[10px]">Total Fee</span>
+            <span id="checkout-price" class="font-extrabold text-ghanaRed text-sm">GH₵ 6,500</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Student Full Name *</label>
+          <input type="text" id="pay-student-name" placeholder="e.g. Ama Serwaa Prempeh" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-ghanaGreen focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Student Index / Phone Number *</label>
+          <input type="tel" id="pay-student-phone" placeholder="024 XXX XXXX" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-ghanaGreen focus:outline-none">
+        </div>
+
+        <!-- PAYMENT METHOD SELECTION -->
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-2">Select Preferred Payment Mode</label>
+          <div class="grid grid-cols-2 gap-3">
+            
+            <label class="border-2 border-ghanaGreen bg-emerald-50/50 p-3 rounded-2xl cursor-pointer flex flex-col justify-between relative">
+              <input type="radio" name="pay-method" value="MOMO" checked onchange="togglePayFields('MOMO')" class="absolute top-3 right-3 accent-ghanaGreen">
+              <div class="flex items-center space-x-2 text-xs font-bold text-gray-800 mb-2">
+                <i class="fa-solid fa-mobile-screen-button text-ghanaGreen text-base"></i>
+                <span>Mobile Money (MoMo)</span>
+              </div>
+              <p class="text-[10px] text-gray-500">MTN MoMo, Telecel Cash, AT Money</p>
+            </label>
+
+            <label class="border border-gray-200 p-3 rounded-2xl cursor-pointer flex flex-col justify-between relative hover:bg-gray-50">
+              <input type="radio" name="pay-method" value="OFFLINE" onchange="togglePayFields('OFFLINE')" class="absolute top-3 right-3 accent-ghanaGreen">
+              <div class="flex items-center space-x-2 text-xs font-bold text-gray-800 mb-2">
+                <i class="fa-solid fa-hand-holding-dollar text-ghanaGold text-base"></i>
+                <span>Pay In-Person</span>
+              </div>
+              <p class="text-[10px] text-gray-500">Pay at Hostel Manager Office</p>
+            </label>
+
+          </div>
+        </div>
+
+        <!-- MOMO SPECIFIC FIELDS -->
+        <div id="momo-fields" class="bg-gray-50 p-3 rounded-2xl border border-gray-200 space-y-2">
+          <label class="block text-xs font-bold text-gray-700">MoMo Network Provider</label>
+          <div class="flex gap-2">
+            <span class="px-2 py-1 bg-yellow-400 text-gray-900 font-bold text-[10px] rounded-lg">MTN MoMo</span>
+            <span class="px-2 py-1 bg-red-600 text-white font-bold text-[10px] rounded-lg">Telecel Cash</span>
+            <span class="px-2 py-1 bg-blue-600 text-white font-bold text-[10px] rounded-lg">AT Money</span>
+          </div>
+          <input type="tel" id="pay-momo-num" placeholder="Enter MoMo Wallet Number" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-ghanaGreen focus:outline-none">
+        </div>
+
+        <button onclick="processPayment()" class="w-full py-3 bg-ghanaGreen hover:bg-emerald-800 text-white font-bold rounded-2xl shadow-xl transition flex items-center justify-center space-x-2">
+          <i class="fa-solid fa-check-double"></i>
+          <span>Confirm & Complete Payment</span>
+        </button>
+
+      </div>
+
+      <!-- BOOKING CONFIRMATION / RECEIPT DISPLAY (SHOWN AFTER PAYMENT) -->
+      <div id="booking-step-receipt" class="hidden text-center space-y-4 py-2">
+        <div class="w-16 h-16 bg-emerald-100 text-ghanaGreen rounded-full flex items-center justify-center mx-auto text-3xl">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <div>
+          <h3 class="text-xl font-black text-gray-900">Payment Confirmed & Approved!</h3>
+          <p class="text-xs text-gray-500">Your official digital booking receipt has been generated.</p>
+        </div>
+
+        <!-- DIGITAL RECEIPT CARD -->
+        <div class="bg-amber-50/60 border-2 border-dashed border-amber-300 p-4 rounded-2xl text-left text-xs space-y-2 relative">
+          <div class="flex justify-between font-bold border-b border-amber-200 pb-2">
+            <span>IKE HOSTEL DIGITAL PASS</span>
+            <span class="text-ghanaRed" id="receipt-ref">REF-892304</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <span class="text-[10px] text-gray-400 block">Student Name</span>
+              <span id="receipt-student" class="font-bold text-gray-800">Ama Serwaa</span>
+            </div>
+            <div>
+              <span class="text-[10px] text-gray-400 block">Hostel</span>
+              <span id="receipt-hostel" class="font-bold text-gray-800">Pentagon Villa</span>
+            </div>
+            <div>
+              <span class="text-[10px] text-gray-400 block">Payment Mode</span>
+              <span id="receipt-mode" class="font-bold text-ghanaGreen">MTN Mobile Money</span>
+            </div>
+            <div>
+              <span class="text-[10px] text-gray-400 block">Amount Paid</span>
+              <span id="receipt-amount" class="font-bold text-gray-800">GH₵ 6,500</span>
+            </div>
+          </div>
+          <div class="pt-2 border-t border-amber-200 text-[10px] text-gray-500 italic">
+            Show this digital pass to the hostel manager upon checking in.
+          </div>
+        </div>
+
+        <button onclick="closeBookingModal()" class="w-full py-2.5 bg-gray-900 text-white font-bold rounded-xl text-xs">
+          Close & Return to Dashboard
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- AUTHENTICATION MODAL (SIGN IN / MANAGER REGISTER WITH PERMIT) -->
+  <div id="auth-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-200 relative">
+      <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl font-bold">&times;</button>
+
+      <div class="text-center mb-6">
+        <h3 class="text-2xl font-black text-gray-900">Sign In / Register</h3>
+        <p class="text-xs text-gray-500">Access student booking or manager hostel portal</p>
+      </div>
+
+      <!-- ROLE SELECTOR TABS -->
+      <div class="grid grid-cols-2 bg-gray-100 p-1 rounded-xl mb-4 text-xs font-bold">
+        <button id="auth-tab-student" onclick="toggleAuthRole('student')" class="py-2 rounded-lg bg-white shadow text-ghanaDark">Student</button>
+        <button id="auth-tab-manager" onclick="toggleAuthRole('manager')" class="py-2 rounded-lg text-gray-500">Hostel Manager</button>
+      </div>
+
+      <!-- STUDENT FORM -->
+      <form id="auth-student-form" onsubmit="handleAuthSubmit(event, 'student')" class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Student Email / Phone</label>
+          <input type="text" required placeholder="student@st.ug.edu.gh" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-ghanaGreen focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Password</label>
+          <input type="password" required placeholder="••••••••" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-ghanaGreen focus:outline-none">
+        </div>
+        <button type="submit" class="w-full py-2.5 bg-ghanaRed text-white font-bold rounded-xl text-xs shadow-lg hover:bg-red-700 transition">
+          Sign In as Student
+        </button>
+      </form>
+
+      <!-- MANAGER REGISTRATION & PERMIT UPLOAD FORM -->
+      <form id="auth-manager-form" onsubmit="handleAuthSubmit(event, 'manager')" class="hidden space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Manager Full Name / Business Name *</label>
+          <input type="text" id="auth-mgr-name" required placeholder="e.g. Chief Mensah Accommodations" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-ghanaGreen focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-700 mb-1">Primary Hostel Operating Location *</label>
+          <select id="auth-mgr-location" class="w-full border border-gray-200 rounded-xl px-3 py-2 text-xs font-semibold">
+            <option value="Accra (UG / ATU)">Accra (UG Legon / ATU)</option>
+            <option value="Kumasi (KNUST / KsTU)">Kumasi (KNUST / KsTU)</option>
+            <option value="Cape Coast (UCC)">Cape Coast (UCC)</option>
+            <option value="Tarkwa (UMaT)">Tarkwa (UMaT)</option>
+            <option value="Tamale (UTS / UDS)">Tamale (UTS / UDS)</option>
+            <option value="UPSA">University of Professional Studies (UPSA)</option>
+          </select>
+        </div>
+        
+        <!-- OPERATIONAL PERMIT UPLOAD MANDATE -->
+        <div class="bg-amber-50 p-3 rounded-2xl border border-amber-200 text-xs space-y-1">
+          <span class="font-bold text-amber-900 block flex items-center gap-1">
+            <i class="fa-solid fa-file-contract text-ghanaRed"></i> Operational Permit Required
+          </span>
+          <p class="text-[10px] text-amber-800">
+            Submit your Municipal Operating Permit or Business License URL. Ike Hostel Admin must approve your registration before full app upload rights are enabled.
+          </p>
+          <input type="url" id="auth-mgr-permit" required placeholder="https://license-vault.com/permit.pdf" value="https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80" class="w-full bg-white border border-amber-300 rounded-xl px-2.5 py-1.5 text-xs focus:outline-none mt-1">
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-ghanaGreen text-white font-bold rounded-xl text-xs shadow-lg hover:bg-emerald-800 transition">
+          Submit Manager Application for Admin Approval
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- REAL-TIME CHAT DRAWER -->
+  <div id="chat-modal" class="hidden fixed bottom-4 right-4 z-50 w-80 md:w-96 bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col h-[480px]">
+    <div class="bg-gray-900 text-white p-3.5 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <div class="w-3 h-3 rounded-full bg-ghanaGreen animate-pulse"></div>
+        <div>
+          <h4 id="chat-target-name" class="font-bold text-xs">Manager Live Inquiry</h4>
+          <span class="text-[10px] text-ghanaGold">Direct Room Inspection Chat</span>
+        </div>
+      </div>
+      <button onclick="closeChatModal()" class="text-gray-400 hover:text-white text-lg font-bold">&times;</button>
+    </div>
+
+    <!-- MESSAGES FEED -->
+    <div id="chat-feed" class="flex-grow p-3 overflow-y-auto space-y-2 text-xs custom-scrollbar bg-gray-50">
+      <div class="bg-white border border-gray-200 p-2.5 rounded-2xl max-w-[85%] text-gray-700 shadow-sm">
+        Akwaaba! Welcome to Ike Hostel support. Ask any questions about room bookings or campus distance!
+      </div>
+    </div>
+
+    <!-- CHAT INPUT -->
+    <div class="p-2 bg-white border-t border-gray-200 flex items-center space-x-2">
+      <input type="text" id="chat-input" placeholder="Type message..." onkeypress="if(event.key==='Enter') sendChatMessage()" class="flex-grow border border-gray-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-ghanaGreen focus:outline-none">
+      <button onclick="sendChatMessage()" class="w-9 h-9 bg-ghanaGreen text-white rounded-xl flex items-center justify-center shrink-0">
+        <i class="fa-solid fa-paper-plane text-xs"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- FOOTER WITH GHANA THEME -->
+  <footer class="bg-gray-900 text-gray-400 py-8 border-t border-gray-800 mt-12">
+    <div class="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-6 text-xs">
+      <div>
+        <span class="text-xl font-black text-white">Ike<span class="text-ghanaRed">Hostel</span></span>
+        <p class="mt-2 text-gray-400">Ghana's leading verified off-campus student accommodation discovery and booking portal.</p>
+      </div>
+      <div>
+        <h5 class="text-white font-bold mb-2 uppercase tracking-wider">Universities Covered</h5>
+        <ul class="space-y-1">
+          <li>UG - Legon (Accra)</li>
+          <li>KNUST (Kumasi)</li>
+          <li>UCC (Cape Coast)</li>
+          <li>UMaT (Tarkwa)</li>
+          <li>ATU (Accra Technical University)</li>
+          <li>UPSA (University of Professional Studies)</li>
+        </ul>
+      </div>
+      <div>
+        <h5 class="text-white font-bold mb-2 uppercase tracking-wider">Hostel Locations</h5>
+        <ul class="space-y-1">
+          <li>Ayeduase & Kotei (KNUST)</li>
+          <li>Madina & Ayawaso (Legon)</li>
+          <li>Apewosika & Amamoma (UCC)</li>
+        </ul>
+      </div>
+      <div>
+        <h5 class="text-white font-bold mb-2 uppercase tracking-wider">Platform Security</h5>
+        <p class="text-gray-400">All hostel managers undergo municipal permit verification before room publishing.</p>
+        <div class="mt-2 flex space-x-2 text-ghanaGold">
+          <i class="fa-solid fa-shield-halved text-base"></i>
+          <i class="fa-solid fa-lock text-base"></i>
+          <i class="fa-solid fa-certificate text-base"></i>
+        </div>
+      </div>
+    </div>
+    <div class="container mx-auto px-4 mt-6 pt-4 border-t border-gray-800 text-center text-[11px]">
+      &copy; 2026 Ike Hostel Platform Ghana. All Rights Reserved. Built for Ghanaian Students.
+    </div>
+  </footer>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // INITIAL HOSTELS SEED DATA
+    let hostels = [
+      {
+        id: 1,
+        title: "Pentagon Villa Annex",
+        university: "UG",
+        city: "Accra",
+        distance: "5 mins walk to UG Main Gate (0.4 km)",
+        price: 6500,
+        utilities: "Inclusive of Electricity & Water",
+        occupancy: "2 in a room",
+        washroom: "Private / Ensuite Washroom",
+        rating: 4.8,
+        reviewsCount: 14,
+        managerName: "Mr. Ebenezer Osei",
+        verified: true,
+        img: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80",
+        video: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+        lat: 5.6506,
+        lng: -0.1870,
+        amenities: ["Wi-Fi", "Standby Generator", "PolyTank Water Storage", "24/7 Security", "Air Conditioner"],
+        reviews: [
+          { name: "Kofi Annan", comment: "Very quiet environment, generator comes on immediately lights go off.", rating: 5 },
+          { name: "Abena Mansa", comment: "Water flows 24/7. Ensuite washroom is clean.", rating: 4.5 }
+        ]
+      },
+      {
+        id: 2,
+        title: "Ayeduase Royal Heights",
+        university: "KNUST",
+        city: "Kumasi",
+        distance: "8 mins walk to KNUST Ayeduase Gate (0.7 km)",
+        price: 5200,
+        utilities: "Inclusive of Electricity & Water",
+        occupancy: "1 in a room",
+        washroom: "Private / Ensuite Washroom",
+        rating: 4.9,
+        reviewsCount: 22,
+        managerName: "Madam Grace Mensah",
+        verified: true,
+        img: "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=800&q=80",
+        video: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+        lat: 6.6731,
+        lng: -1.5654,
+        amenities: ["Wi-Fi", "Standby Generator", "PolyTank Water Storage", "24/7 Security", "Study Desk & Chair"],
+        reviews: [
+          { name: "Yaw Kwakye", comment: "Best single room hostel near KNUST. Wi-Fi speed is top notch.", rating: 5 }
+        ]
+      },
+      {
+        id: 3,
+        title: "Apewosika Scholars Haven",
+        university: "UCC",
+        city: "Cape Coast",
+        distance: "3 mins walk to UCC Science Complex",
+        price: 4200,
+        utilities: "Additional Service Fees Apply",
+        occupancy: "3 in a room",
+        washroom: "Shared Washroom",
+        rating: 4.3,
+        reviewsCount: 9,
+        managerName: "Uncle Fiifi Eduful",
+        verified: true,
+        img: "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=800&q=80",
+        video: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+        lat: 5.1054,
+        lng: -1.2821,
+        amenities: ["Wi-Fi", "PolyTank Water Storage", "24/7 Security"],
+        reviews: [
+          { name: "Esi Badu", comment: "Spacious quad room, good for students on a budget.", rating: 4 }
+        ]
+      },
+      {
+        id: 4,
+        title: "Takoradi Harbor View Lodge",
+        university: "TTU",
+        city: "Takoradi",
+        distance: "10 mins shuttle to TTU Main Campus",
+        price: 3800,
+        utilities: "Inclusive of Electricity & Water",
+        occupancy: "4 in a room",
+        washroom: "Shared Washroom",
+        rating: 4.5,
+        reviewsCount: 11,
+        managerName: "Mr. Patrick Baidoo",
+        verified: true,
+        img: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80",
+        video: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+        lat: 4.8980,
+        lng: -1.7588,
+        amenities: ["Wi-Fi", "PolyTank Water Storage", "24/7 Security"],
+        reviews: []
+      }
+    ];
+
+    // ADMIN PENDING PERMITS DATA
+    let pendingPermits = [
+      {
+        id: 101,
+        managerName: "Barimah Akwasi Kwarteng",
+        hostelTitle: "Kotei Paramount Suites",
+        university: "KNUST",
+        city: "Kumasi",
+        docUrl: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80",
+        status: "Pending"
+      }
+    ];
+
+    // SYSTEM NOTIFICATIONS LIST
+    let notifications = [
+      { id: 1, text: "Welcome to Ike Hostel! Browse verified rooms near UG, KNUST & UCC.", time: "Just now", type: "info" }
+    ];
+
+    let currentSelectedHostel = null;
+    let leafletMapInstance = null;
+    let mapMarkers = [];
+
+    // INITIALIZATION ON WINDOW LOAD
+    window.onload = function() {
+      renderHostelCards(hostels);
+      renderAdminPermits();
+      renderNotifications();
+      initLeafletMap();
+      updatePendingBadge();
+    };
+
+    // TAB SWITCHING FUNCTION
+    function switchTab(tabId) {
+      document.getElementById('view-explore').style.display = tabId === 'explore' ? 'block' : 'none';
+      document.getElementById('view-map').style.display = tabId === 'map' ? 'block' : 'none';
+      document.getElementById('view-manager').style.display = tabId === 'manager' ? 'block' : 'none';
+      document.getElementById('view-admin').style.display = tabId === 'admin' ? 'block' : 'none';
+
+      // Update Nav highlighting
+      const tabs = ['explore', 'map', 'manager', 'admin'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`nav-${t}`);
+        if(btn) {
+          if (t === tabId) {
+            btn.className = "px-4 py-2 rounded-lg transition-all flex items-center space-x-2 bg-white text-ghanaDark shadow-sm font-semibold";
+          } else {
+            btn.className = "px-4 py-2 rounded-lg transition-all flex items-center space-x-2 text-gray-600 hover:text-gray-900";
+          }
+        }
+      });
+
+      if (tabId === 'map' && leafletMapInstance) {
+        setTimeout(() => { leafletMapInstance.invalidateSize(); }, 200);
+      }
+    }
+
+    // RENDER HOSTEL CARDS GRID
+    function renderHostelCards(data) {
+      const grid = document.getElementById('hostels-grid');
+      const emptyMsg = document.getElementById('no-results-msg');
+      document.getElementById('results-count-badge').innerText = `${data.length} Hostels Listed`;
+
+      if (data.length === 0) {
+        grid.innerHTML = '';
+        emptyMsg.classList.remove('hidden');
+        return;
+      }
+      emptyMsg.classList.add('hidden');
+
+      grid.innerHTML = data.map(h => `
+        <div class="bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all border border-gray-100 flex flex-col justify-between group">
+          <div>
+            <!-- CARD IMAGE BANNER -->
+            <div class="relative h-48 overflow-hidden bg-gray-900">
+              <img src="${h.img}" alt="${h.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+              <div class="absolute top-3 left-3 flex gap-1">
+                <span class="bg-ghanaDark/90 backdrop-blur-md text-ghanaGold text-[10px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-wider">
+                  ${h.university}
+                </span>
+                ${h.verified ? `
+                  <span class="bg-ghanaGreen text-white text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
+                    <i class="fa-solid fa-circle-check"></i> Verified
+                  </span>
+                ` : ''}
+              </div>
+              <div class="absolute bottom-3 right-3 bg-white/90 backdrop-blur-md text-gray-900 text-xs font-black px-3 py-1 rounded-full shadow">
+                GH₵ ${h.price.toLocaleString()} <span class="text-[9px] font-normal text-gray-600">/ yr</span>
+              </div>
+            </div>
+
+            <!-- CARD CONTENT -->
+            <div class="p-5">
+              <h3 class="font-black text-gray-900 text-lg group-hover:text-ghanaRed transition">${h.title}</h3>
+              <p class="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                <i class="fa-solid fa-location-dot text-ghanaRed"></i> ${h.city} • ${h.distance}
+              </p>
+
+              <!-- OCCUPANCY & WASHROOM BADGES -->
+              <div class="mt-3 flex flex-wrap gap-1.5 text-[11px] font-bold">
+                <span class="bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-lg">
+                  <i class="fa-solid fa-bed text-ghanaGold mr-1"></i> ${h.occupancy}
+                </span>
+                <span class="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                  <i class="fa-solid fa-bath text-ghanaGreen mr-1"></i> ${h.washroom}
+                </span>
+              </div>
+
+              <!-- UTILITIES TAG -->
+              <div class="mt-2 text-[10px] font-semibold text-gray-500">
+                <i class="fa-solid fa-bolt text-yellow-500 mr-1"></i> ${h.utilities}
+              </div>
+            </div>
+          </div>
+
+          <!-- CARD FOOTER ACTIONS -->
+          <div class="p-5 pt-0 flex items-center justify-between gap-2 border-t border-gray-100 mt-3">
+            <div class="flex items-center space-x-1 text-xs font-bold text-gray-700">
+              <i class="fa-solid fa-star text-amber-500"></i>
+              <span>${h.rating}</span>
+              <span class="text-gray-400 font-normal">(${h.reviewsCount})</span>
+            </div>
+
+            <button onclick="openDetailModal(${h.id})" class="px-4 py-2 bg-ghanaDark hover:bg-gray-800 text-white font-bold rounded-xl text-xs transition shadow flex items-center space-x-1">
+              <span>View Details</span>
+              <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // LEAFLET MAP INITIALIZATION
+    function initLeafletMap() {
+      // Centered on Ghana (Kumasi/Accra bounds)
+      leafletMapInstance = L.map('leaflet-map').setView([6.1, -1.2], 7);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors | Ike Hostel Ghana'
+      }).addTo(leafletMapInstance);
+
+      updateMapMarkers(hostels);
+    }
+
+    function updateMapMarkers(data) {
+      if(!leafletMapInstance) return;
+
+      // Clear existing markers
+      mapMarkers.forEach(m => leafletMapInstance.removeLayer(m));
+      mapMarkers = [];
+
+      const listContainer = document.getElementById('map-hostel-list');
+      listContainer.innerHTML = '';
+
+      data.forEach(h => {
+        // Create marker
+        const marker = L.marker([h.lat, h.lng]).addTo(leafletMapInstance);
+        marker.bindPopup(`
+          <div class="text-xs p-1">
+            <strong class="block text-sm font-bold text-gray-900">${h.title}</strong>
+            <span class="text-ghanaRed font-bold block">GH₵ ${h.price.toLocaleString()} / yr</span>
+            <span class="text-gray-500">${h.university} - ${h.occupancy}</span><br>
+            <button onclick="openDetailModal(${h.id})" class="mt-2 px-3 py-1 bg-ghanaGreen text-white text-[10px] font-bold rounded-lg w-full">
+              Inspect Hostel
+            </button>
+          </div>
+        `);
+        mapMarkers.push(marker);
+
+        // Sidebar list item
+        listContainer.innerHTML += `
+          <div onclick="panToHostel(${h.lat}, ${h.lng}, ${h.id})" class="p-3 hover:bg-white cursor-pointer transition">
+            <span class="font-bold text-gray-900 block">${h.title}</span>
+            <span class="text-ghanaRed font-bold">GH₵ ${h.price.toLocaleString()}</span>
+            <span class="text-[10px] text-gray-500 block">${h.university} • ${h.occupancy}</span>
+          </div>
+        `;
+      });
+    }
+
+    function panToHostel(lat, lng, id) {
+      if(leafletMapInstance) {
+        leafletMapInstance.setView([lat, lng], 14);
+      }
+    }
+
+    // FILTER LOGIC
+    function applyFilters() {
+      const univ = document.getElementById('filter-university').value;
+      const city = document.getElementById('filter-city').value;
+      const occ = document.getElementById('filter-occupancy').value;
+      const wash = document.getElementById('filter-washroom').value;
+      const maxPrice = parseInt(document.getElementById('filter-price').value);
+
+      const filtered = hostels.filter(h => {
+        const matchUniv = univ === 'ALL' || h.university === univ;
+        const matchCity = city === 'ALL' || h.city.toLowerCase().includes(city.toLowerCase());
+        const matchOcc = occ === 'ALL' || h.occupancy === occ;
+        const matchWash = wash === 'ALL' || h.washroom === wash;
+        const matchPrice = h.price <= maxPrice;
+        return matchUniv && matchCity && matchOcc && matchWash && matchPrice;
+      });
+
+      renderHostelCards(filtered);
+      updateMapMarkers(filtered);
+    }
+
+    function updatePriceLabel(val) {
+      document.getElementById('price-slider-val').innerText = parseInt(val).toLocaleString();
+    }
+
+    function resetFilters() {
+      document.getElementById('filter-university').value = 'ALL';
+      document.getElementById('filter-city').value = 'ALL';
+      document.getElementById('filter-occupancy').value = 'ALL';
+      document.getElementById('filter-washroom').value = 'ALL';
+      document.getElementById('filter-price').value = 25000;
+      updatePriceLabel(25000);
+      renderHostelCards(hostels);
+      updateMapMarkers(hostels);
+    }
+
+    // DETAIL MODAL FUNCTIONS
+    function openDetailModal(hostelId) {
+      const h = hostels.find(x => x.id === hostelId);
+      if(!h) return;
+      currentSelectedHostel = h;
+
+      document.getElementById('modal-title').innerText = h.title;
+      document.getElementById('modal-img').src = h.img;
+      document.getElementById('modal-location').innerHTML = `<i class="fa-solid fa-location-dot text-ghanaGold"></i> ${h.city} • ${h.distance}`;
+      document.getElementById('modal-univ-badge').innerText = h.university;
+      document.getElementById('modal-price').innerText = h.price.toLocaleString();
+      document.getElementById('modal-utilities').innerText = h.utilities;
+      document.getElementById('modal-occupancy').innerText = h.occupancy;
+      document.getElementById('modal-washroom').innerText = h.washroom;
+      document.getElementById('modal-distance').innerText = h.distance;
+      document.getElementById('modal-rating').innerText = `${h.rating} / 5.0`;
+      document.getElementById('modal-manager-name').innerText = h.managerName;
+      document.getElementById('modal-video-iframe').src = h.video;
+
+      // Amenities pills
+      const amenContainer = document.getElementById('modal-amenities');
+      amenContainer.innerHTML = h.amenities.map(a => `
+        <span class="bg-gray-100 text-gray-700 px-2.5 py-1.5 rounded-xl flex items-center gap-1 font-medium">
+          <i class="fa-solid fa-circle-check text-ghanaGreen"></i> ${a}
+        </span>
+      `).join('');
+
+      // Reviews list
+      const revContainer = document.getElementById('modal-reviews-list');
+      if (h.reviews && h.reviews.length > 0) {
+        revContainer.innerHTML = h.reviews.map(r => `
+          <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 text-xs">
+            <div class="flex justify-between font-bold text-gray-800 mb-1">
+              <span>${r.name}</span>
+              <span class="text-amber-500"><i class="fa-solid fa-star"></i> ${r.rating}</span>
+            </div>
+            <p class="text-gray-600">${r.comment}</p>
+          </div>
+        `).join('');
+      } else {
+        revContainer.innerHTML = `<p class="text-xs text-gray-400 italic">No student reviews posted yet.</p>`;
+      }
+
+      document.getElementById('detail-modal').classList.remove('hidden');
+    }
+
+    function closeDetailModal() {
+      document.getElementById('detail-modal').classList.add('hidden');
+      document.getElementById('modal-video-iframe').src = '';
+    }
+
+    // BOOKING & PAYMENT WORKFLOW
+    function openBookingPaymentModal() {
+      if(!currentSelectedHostel) return;
+      document.getElementById('checkout-hostel-title').innerText = currentSelectedHostel.title;
+      document.getElementById('checkout-room-type').innerText = `${currentSelectedHostel.occupancy} • ${currentSelectedHostel.washroom}`;
+      document.getElementById('checkout-price').innerText = `GH₵ ${currentSelectedHostel.price.toLocaleString()}`;
+
+      document.getElementById('booking-step-1').classList.remove('hidden');
+      document.getElementById('booking-step-receipt').classList.add('hidden');
+      document.getElementById('booking-modal').classList.remove('hidden');
+    }
+
+    function closeBookingModal() {
+      document.getElementById('booking-modal').classList.add('hidden');
+    }
+
+    function togglePayFields(mode) {
+      const momoFields = document.getElementById('momo-fields');
+      if (mode === 'MOMO') {
+        momoFields.classList.remove('hidden');
+      } else {
+        momoFields.classList.add('hidden');
+      }
+    }
+
+    function processPayment() {
+      const studentName = document.getElementById('pay-student-name').value;
+      if (!studentName) {
+        alert("Please enter your full name for the booking pass.");
+        return;
+      }
+
+      const refCode = "IKE-" + Math.floor(100000 + Math.random() * 900000);
+      const isMomo = document.querySelector('input[name="pay-method"]:checked').value === 'MOMO';
+
+      document.getElementById('receipt-ref').innerText = refCode;
+      document.getElementById('receipt-student').innerText = studentName;
+      document.getElementById('receipt-hostel').innerText = currentSelectedHostel.title;
+      document.getElementById('receipt-mode').innerText = isMomo ? "Mobile Money (MTN / Telecel)" : "In-Person Office Payment";
+      document.getElementById('receipt-amount').innerText = `GH₵ ${currentSelectedHostel.price.toLocaleString()}`;
+
+      document.getElementById('booking-step-1').classList.add('hidden');
+      document.getElementById('booking-step-receipt').classList.remove('hidden');
+
+      // Push notification trigger
+      addNotification(`Booking confirmed for ${currentSelectedHostel.title}. Pass Code: ${refCode}`);
+    }
+
+    // MANAGER LISTING UPLOAD SUBMISSION
+    function handleManagerSubmitListing(e) {
+      e.preventDefault();
+      
+      const title = document.getElementById('mgr-hostel-name').value;
+      const univ = document.getElementById('mgr-university').value;
+      const city = document.getElementById('mgr-city').value;
+      const distance = document.getElementById('mgr-distance').value;
+      const price = parseInt(document.getElementById('mgr-price').value);
+      const utilities = document.getElementById('mgr-utilities').value;
+      const occupancy = document.getElementById('mgr-occupancy').value;
+      const washroom = document.getElementById('mgr-washroom').value;
+      const photoUrl = document.getElementById('mgr-photo-url').value;
+      const videoUrl = document.getElementById('mgr-video-url').value;
+
+      // Amenities
+      const checkedAmen = Array.from(document.querySelectorAll('input[name="amenities"]:checked')).map(cb => cb.value);
+
+      const newHostel = {
+        id: Date.now(),
+        title,
+        university: univ,
+        city,
+        distance,
+        price,
+        utilities,
+        occupancy,
+        washroom,
+        rating: 5.0,
+        reviewsCount: 1,
+        managerName: "Logged-in Manager",
+        verified: true,
+        img: photoUrl || "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80",
+        video: videoUrl || "https://www.youtube.com/embed/dQw4w9WgXcQ",
+        lat: 5.65 + (Math.random() * 0.02),
+        lng: -0.18 + (Math.random() * 0.02),
+        amenities: checkedAmen.length > 0 ? checkedAmen : ["Wi-Fi", "Security"],
+        reviews: []
+      };
+
+      hostels.unshift(newHostel);
+      renderHostelCards(hostels);
+      updateMapMarkers(hostels);
+      renderManagerListings();
+
+      addNotification(`New listing alert: "${title}" added in ${city} near ${univ}!`);
+      alert("Room listing published successfully to Ike Hostel!");
+      e.target.reset();
+    }
+
+    function renderManagerListings() {
+      const container = document.getElementById('mgr-uploaded-list');
+      document.getElementById('mgr-total-count').innerText = hostels.length;
+
+      container.innerHTML = hostels.map(h => `
+        <div class="p-3 bg-gray-50 rounded-xl border border-gray-200 text-xs flex justify-between items-center">
+          <div>
+            <span class="font-bold text-gray-900 block">${h.title}</span>
+            <span class="text-[10px] text-gray-500">${h.occupancy} • GH₵ ${h.price.toLocaleString()}</span>
+          </div>
+          <span class="bg-emerald-100 text-ghanaGreen text-[10px] font-bold px-2 py-0.5 rounded-full">Active</span>
+        </div>
+      `).join('');
+    }
+
+    // ADMIN PERMIT APPROVAL WORKFLOW
+    function renderAdminPermits() {
+      const container = document.getElementById('admin-permit-list');
+      if (pendingPermits.length === 0) {
+        container.innerHTML = `<p class="p-6 text-xs text-gray-400 text-center italic">No pending manager applications.</p>`;
+        return;
+      }
+
+      container.innerHTML = pendingPermits.map(p => `
+        <div class="p-4 grid grid-cols-12 gap-2 items-center text-xs">
+          <div class="col-span-3">
+            <span class="font-bold text-gray-900 block">${p.managerName}</span>
+            <span class="text-gray-500 text-[10px]">${p.hostelTitle}</span>
+          </div>
+          <div class="col-span-3">
+            <span class="font-semibold text-gray-800">${p.university}</span>
+            <span class="text-gray-500 text-[10px] block">${p.city}</span>
+          </div>
+          <div class="col-span-3">
+            <a href="${p.docUrl}" target="_blank" class="text-blue-600 underline font-bold flex items-center gap-1">
+              <i class="fa-solid fa-file-pdf"></i> View Permit Preview
+            </a>
+          </div>
+          <div class="col-span-3 text-right flex justify-end gap-2">
+            <button onclick="approveManagerPermit(${p.id}, true)" class="px-3 py-1.5 bg-ghanaGreen hover:bg-emerald-800 text-white font-bold rounded-lg transition">
+              Approve
+            </button>
+            <button onclick="approveManagerPermit(${p.id}, false)" class="px-3 py-1.5 bg-ghanaRed hover:bg-red-800 text-white font-bold rounded-lg transition">
+              Reject
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function approveManagerPermit(id, isApproved) {
+      const permitIndex = pendingPermits.findIndex(p => p.id === id);
+      if (permitIndex > -1) {
+        const p = pendingPermits[permitIndex];
+        pendingPermits.splice(permitIndex, 1);
+        renderAdminPermits();
+        updatePendingBadge();
+
+        if (isApproved) {
+          addNotification(`ALERT: Manager Application for "${p.managerName}" was ACCEPTED by Admin.`);
+          alert(`Application for ${p.managerName} APPROVED. Full upload access granted.`);
+        } else {
+          addNotification(`ALERT: Manager Application for "${p.managerName}" was DENIED.`);
+          alert(`Application DENIED.`);
+        }
+      }
+    }
+
+    function updatePendingBadge() {
+      const badge = document.getElementById('pending-badge');
+      const countLabel = document.getElementById('admin-pending-count');
+      const count = pendingPermits.length;
+
+      countLabel.innerText = count;
+      if (count > 0) {
+        badge.innerText = count;
+        badge.classList.remove('hidden');
+      } else {
+        badge.classList.add('hidden');
+      }
+    }
+
+    // AUTH MODAL & MANAGER PERMIT SUBMISSION
+    function openAuthModal(role = 'student') {
+      toggleAuthRole(role);
+      document.getElementById('auth-modal').classList.remove('hidden');
+    }
+
+    function closeAuthModal() {
+      document.getElementById('auth-modal').classList.add('hidden');
+    }
+
+    function toggleAuthRole(role) {
+      const studentBtn = document.getElementById('auth-tab-student');
+      const managerBtn = document.getElementById('auth-tab-manager');
+      const studentForm = document.getElementById('auth-student-form');
+      const managerForm = document.getElementById('auth-manager-form');
+
+      if (role === 'student') {
+        studentBtn.className = "py-2 rounded-lg bg-white shadow text-ghanaDark";
+        managerBtn.className = "py-2 rounded-lg text-gray-500";
+        studentForm.classList.remove('hidden');
+        managerForm.classList.add('hidden');
+      } else {
+        managerBtn.className = "py-2 rounded-lg bg-white shadow text-ghanaDark";
+        studentBtn.className = "py-2 rounded-lg text-gray-500";
+        managerForm.classList.remove('hidden');
+        studentForm.classList.add('hidden');
+      }
+    }
+
+    function handleAuthSubmit(e, role) {
+      e.preventDefault();
+      if (role === 'manager') {
+        const mgrName = document.getElementById('auth-mgr-name').value;
+        const location = document.getElementById('auth-mgr-location').value;
+        const permitUrl = document.getElementById('auth-mgr-permit').value;
+
+        // Add to pending permits
+        pendingPermits.push({
+          id: Date.now(),
+          managerName: mgrName,
+          hostelTitle: "New Hostel Project",
+          university: location.split(' ')[0],
+          city: location,
+          docUrl: permitUrl,
+          status: "Pending"
+        });
+
+        renderAdminPermits();
+        updatePendingBadge();
+
+        addNotification(`Manager Permit submitted for ${mgrName}. Pending Admin approval.`);
+        alert("Your operating permit has been submitted! Admin will verify your license shortly.");
+      } else {
+        alert("Student Sign In Successful!");
+      }
+      closeAuthModal();
+    }
+
+    // NOTIFICATION CENTER FUNCTIONS
+    function addNotification(text) {
+      notifications.unshift({ id: Date.now(), text, time: "Just now", type: "alert" });
+      renderNotifications();
+      document.getElementById('notif-ping').classList.remove('hidden');
+    }
+
+    function renderNotifications() {
+      const container = document.getElementById('notif-list');
+      container.innerHTML = notifications.map(n => `
+        <div class="p-3 hover:bg-gray-50 flex items-start space-x-2">
+          <i class="fa-solid fa-circle-info text-ghanaRed text-sm mt-0.5"></i>
+          <div>
+            <p class="font-medium text-gray-800">${n.text}</p>
+            <span class="text-[10px] text-gray-400">${n.time}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function toggleNotificationPanel() {
+      const panel = document.getElementById('notif-dropdown');
+      panel.classList.toggle('hidden');
+      document.getElementById('notif-ping').classList.add('hidden');
+    }
+
+    function clearNotifications() {
+      notifications = [];
+      renderNotifications();
+    }
+
+    // REAL-TIME CHAT DRAWER FUNCTIONS
+    function openChatModal(target = 'general') {
+      document.getElementById('chat-modal').classList.remove('hidden');
+    }
+
+    function openChatFromModal() {
+      closeDetailModal();
+      openChatModal();
+    }
+
+    function closeChatModal() {
+      document.getElementById('chat-modal').classList.add('hidden');
+    }
+
+    function sendChatMessage() {
+      const input = document.getElementById('chat-input');
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      const feed = document.getElementById('chat-feed');
+      // Append student message
+      feed.innerHTML += `
+        <div class="bg-ghanaGreen text-white p-2.5 rounded-2xl max-w-[85%] ml-auto shadow-sm">
+          ${msg}
+        </div>
+      `;
+
+      input.value = '';
+      feed.scrollTop = feed.scrollHeight;
+
+      // Simulated Auto Reply from Manager
+      setTimeout(() => {
+        feed.innerHTML += `
+          <div class="bg-white border border-gray-200 p-2.5 rounded-2xl max-w-[85%] text-gray-700 shadow-sm">
+            Hello! Thanks for reaching out. Yes, rooms are available for inspection this Saturday!
+          </div>
+        `;
+        feed.scrollTop = feed.scrollHeight;
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
